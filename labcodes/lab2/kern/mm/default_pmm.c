@@ -12,7 +12,7 @@
  *  Please refer to Page 196~198, Section 8.2 of Yan Wei Min's Chinese book
  * "Data Structure -- C programming language".
 */
-// LAB2 EXERCISE 1: YOUR CODE
+// LAB2 EXERCISE 1: 2017050024
 // you should rewrite functions: `default_init`, `default_init_memmap`,
 // `default_alloc_pages`, `default_free_pages`.
 /*
@@ -29,10 +29,12 @@
  * special struct (such as struct `page`), using the following MACROs: `le2page`
  * (in memlayout.h), (and in future labs: `le2vma` (in vmm.h), `le2proc` (in
  * proc.h), etc).
+ * 
  * (2) `default_init`:
  *  You can reuse the demo `default_init` function to initialize the `free_list`
  * and set `nr_free` to 0. `free_list` is used to record the free memory blocks.
  * `nr_free` is the total number of the free memory blocks.
+ * 
  * (3) `default_init_memmap`:
  *  CALL GRAPH: `kern_init` --> `pmm_init` --> `page_init` --> `init_memmap` -->
  * `pmm_manager` --> `init_memmap`.
@@ -51,6 +53,7 @@
  *  After that, We can use `p->page_link` to link this page into `free_list`.
  * (e.g.: `list_add_before(&free_list, &(p->page_link));` )
  *  Finally, we should update the sum of the free memory blocks: `nr_free += n`.
+ * 
  * (4) `default_alloc_pages`:
  *  Search for the first free block (block size >= n) in the free list and reszie
  * the block found, returning the address of this block as the address required by
@@ -80,6 +83,7 @@
  *              return `p`.
  *      (4.2)
  *          If we can not find a free block with its size >=n, then return NULL.
+ * 
  * (5) `default_free_pages`:
  *  re-link the pages into the free list, and may merge small free blocks into
  * the big ones.
@@ -110,13 +114,13 @@ default_init_memmap(struct Page *base, size_t n) {
     struct Page *p = base;
     for (; p != base + n; p ++) {
         assert(PageReserved(p));
-        p->flags = p->property = 0;
+        p->flags = p->property = 0;//y free
         set_page_ref(p, 0);
     }
     base->property = n;
     SetPageProperty(base);
     nr_free += n;
-    list_add(&free_list, &(base->page_link));
+    list_add_before(&free_list, &(base->page_link));//y keep order
 }
 
 static struct Page *
@@ -127,20 +131,22 @@ default_alloc_pages(size_t n) {
     }
     struct Page *page = NULL;
     list_entry_t *le = &free_list;
-    while ((le = list_next(le)) != &free_list) {
+
+    while ((le = list_next(le)) != &free_list) {//y 遍历空闲列表
         struct Page *p = le2page(le, page_link);
-        if (p->property >= n) {
+        if (p->property >= n) {//y 找到可用（>=n）的block
             page = p;
             break;
         }
     }
     if (page != NULL) {
-        list_del(&(page->page_link));
-        if (page->property > n) {
+        if (page->property > n) {//y 部分分配
             struct Page *p = page + n;
-            p->property = page->property - n;
-            list_add(&free_list, &(p->page_link));
-    }
+            p->property = page->property - n;//y 剩下的pages组成新的free block
+            SetPageProperty(p);//y head of a free block
+            list_add(&(page->page_link), &(p->page_link));
+        }
+        list_del(&(page->page_link));
         nr_free -= n;
         ClearPageProperty(page);
     }
@@ -151,7 +157,7 @@ static void
 default_free_pages(struct Page *base, size_t n) {
     assert(n > 0);
     struct Page *p = base;
-    for (; p != base + n; p ++) {
+    for (; p != base + n; p ++) { //y 遍历page，清零相关记录
         assert(!PageReserved(p) && !PageProperty(p));
         p->flags = 0;
         set_page_ref(p, 0);
@@ -159,7 +165,7 @@ default_free_pages(struct Page *base, size_t n) {
     base->property = n;
     SetPageProperty(base);
     list_entry_t *le = list_next(&free_list);
-    while (le != &free_list) {
+    while (le != &free_list) {//y 遍历空闲块列表，进行合并
         p = le2page(le, page_link);
         le = list_next(le);
         if (base + base->property == p) {
@@ -175,7 +181,16 @@ default_free_pages(struct Page *base, size_t n) {
         }
     }
     nr_free += n;
-    list_add(&free_list, &(base->page_link));
+    // list_add(&free_list, &(base->page_link));
+    le = list_next(&free_list);
+    while (le != &free_list) {//y find a place to inster
+        p = le2page(le, page_link);
+        le = list_next(le);
+        if (base + base->property <= p) {
+            break;
+        } 
+    }
+    list_add_before(le, &(base->page_link));
 }
 
 static size_t
