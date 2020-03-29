@@ -315,22 +315,22 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
     }
     //check the error_code
     switch (error_code & 3) {
-    default:
-            /* error code flag : default is 3 ( W/R=1, P=1): write, present */
-    case 2: /* error code flag : (W/R=1, P=0): write, not present */
-        if (!(vma->vm_flags & VM_WRITE)) {
-            cprintf("do_pgfault failed: error code flag = write AND not present, but the addr's vma cannot write\n");
+        default:
+                /* error code flag : default is 3 ( W/R=1, P=1): write, present */
+        case 2: /* error code flag : (W/R=1, P=0): write, not present */
+            if (!(vma->vm_flags & VM_WRITE)) {
+                cprintf("do_pgfault failed: error code flag = write AND not present, but the addr's vma cannot write\n");
+                goto failed;
+            }
+            break;
+        case 1: /* error code flag : (W/R=0, P=1): read, present */
+            cprintf("do_pgfault failed: error code flag = read AND present\n");
             goto failed;
-        }
-        break;
-    case 1: /* error code flag : (W/R=0, P=1): read, present */
-        cprintf("do_pgfault failed: error code flag = read AND present\n");
-        goto failed;
-    case 0: /* error code flag : (W/R=0, P=0): read, not present */
-        if (!(vma->vm_flags & (VM_READ | VM_EXEC))) {
-            cprintf("do_pgfault failed: error code flag = read AND not present, but the addr's vma cannot read or exec\n");
-            goto failed;
-        }
+        case 0: /* error code flag : (W/R=0, P=0): read, not present */
+            if (!(vma->vm_flags & (VM_READ | VM_EXEC))) {
+                cprintf("do_pgfault failed: error code flag = read AND not present, but the addr's vma cannot read or exec\n");
+                goto failed;
+            }
     }
     /* IF (write an existed addr ) OR
      *    (write an non_existed addr && addr is writable) OR
@@ -364,15 +364,14 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
     *   mm->pgdir : the PDT of these vma
     *
     */
-#if 0
-    /*LAB3 EXERCISE 1: YOUR CODE*/
-    ptep = ???              //(1) try to find a pte, if pte's PT(Page Table) isn't existed, then create a PT.
-    if (*ptep == 0) {
-                            //(2) if the phy addr isn't exist, then alloc a page & map the phy addr with logical addr
 
+    /*LAB3 EXERCISE 1: 2017050024*/
+    ptep = get_pte(mm->pgdir,addr,1);             //(1) try to find a pte, if pte's PT(Page Table) isn't existed, then create a PT.
+    if (*ptep == 0) {
+        struct Page *page = pgdir_alloc_page(mm->pgdir,addr,perm);   //(2) if the phy addr isn't exist, then alloc a page & map the phy addr with logical addr
     }
     else {
-    /*LAB3 EXERCISE 2: YOUR CODE
+    /*LAB3 EXERCISE 2: 2017050024
     * Now we think this pte is a  swap entry, we should load data from disk to a page with phy addr,
     * and map the phy addr with logical addr, trigger swap manager to record the access situation of this page.
     *
@@ -385,17 +384,17 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
     */
         if(swap_init_ok) {
             struct Page *page=NULL;
-                                    //(1）According to the mm AND addr, try to load the content of right disk page
-                                    //    into the memory which page managed.
-                                    //(2) According to the mm, addr AND page, setup the map of phy addr <---> logical addr
-                                    //(3) make the page swappable.
+            swap_in(mm,addr,&page);                 //(1）According to the mm AND addr, try to load the content of right disk page into the memory which page managed.
+            page_insert(mm->pgdir,page,addr,perm);  //(2) According to the mm, addr AND page, setup the map of phy addr <---> logical addr
+            page->pra_vaddr = addr;
+            swap_map_swappable(mm,addr,page,1);     //(3) make the page swappable.
         }
         else {
             cprintf("no swap_init_ok but ptep is %x, failed\n",*ptep);
             goto failed;
         }
    }
-#endif
+
    ret = 0;
 failed:
     return ret;
