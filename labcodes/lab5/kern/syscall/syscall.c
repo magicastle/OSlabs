@@ -8,12 +8,14 @@
 
 static int
 sys_exit(uint32_t arg[]) {
+    // cprintf("!!!!!!sys_exit\n");
     int error_code = (int)arg[0];
     return do_exit(error_code);
 }
 
 static int
 sys_fork(uint32_t arg[]) {
+    // cprintf("!!!!!!sys_fork\n");
     struct trapframe *tf = current->tf;
     uintptr_t stack = tf->tf_esp;
     return do_fork(0, stack, tf);
@@ -21,6 +23,7 @@ sys_fork(uint32_t arg[]) {
 
 static int
 sys_wait(uint32_t arg[]) {
+    // cprintf("!!!!!!sys_wait\n");
     int pid = (int)arg[0];
     int *store = (int *)arg[1];
     return do_wait(pid, store);
@@ -28,6 +31,7 @@ sys_wait(uint32_t arg[]) {
 
 static int
 sys_exec(uint32_t arg[]) {
+    // cprintf("!!!!!!sys_exec\n");
     const char *name = (const char *)arg[0];
     size_t len = (size_t)arg[1];
     unsigned char *binary = (unsigned char *)arg[2];
@@ -37,11 +41,13 @@ sys_exec(uint32_t arg[]) {
 
 static int
 sys_yield(uint32_t arg[]) {
+    // cprintf("!!!!!!sys_yield\n");
     return do_yield();
 }
 
 static int
 sys_kill(uint32_t arg[]) {
+    // cprintf("!!!!!!sys_kill\n");
     int pid = (int)arg[0];
     return do_kill(pid);
 }
@@ -60,6 +66,7 @@ sys_putc(uint32_t arg[]) {
 
 static int
 sys_pgdir(uint32_t arg[]) {
+    cprintf("!!!!!!sys_pgdir\n");
     print_pgdir();
     return 0;
 }
