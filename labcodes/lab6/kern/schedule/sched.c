@@ -47,7 +47,6 @@ sched_init(void) {
     list_init(&timer_list);
 
     sched_class = &default_sched_class;
-
     rq = &__rq;
     rq->max_time_slice = MAX_TIME_SLICE;
     sched_class->init(rq);
@@ -91,6 +90,7 @@ schedule(void) {
         if (next == NULL) {
             next = idleproc;
         }
+        // cprintf("get next pid is %d name is %s!!!\n",next->pid,next->name);
         next->runs ++;
         if (next != current) {
             proc_run(next);
