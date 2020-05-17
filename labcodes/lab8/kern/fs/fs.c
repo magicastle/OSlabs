@@ -32,7 +32,7 @@ unlock_files(struct files_struct *filesp) {
 //Called when a new proc init
 struct files_struct *
 files_create(void) {
-    //cprintf("[files_create]\n");
+    cprintf("[files_create]\n");
     static_assert((int)FILES_STRUCT_NENTRY > 128);
     struct files_struct *filesp;
     if ((filesp = kmalloc(sizeof(struct files_struct) + FILES_STRUCT_BUFSIZE)) != NULL) {
